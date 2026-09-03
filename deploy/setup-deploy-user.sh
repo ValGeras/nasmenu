@@ -32,7 +32,9 @@ fi
 echo "==> Клонируем репозиторий в ${DEPLOY_PATH}..."
 mkdir -p "$(dirname "${DEPLOY_PATH}")"
 if [[ ! -d "${DEPLOY_PATH}/.git" ]]; then
-  sudo -u "${DEPLOY_USER}" git clone --branch "${BRANCH}" "${REPO_URL}" "${DEPLOY_PATH}"
+  # Клонируем от root (родительский каталог ещё не принадлежит deploy-пользователю),
+  # владельца выставляем ниже через chown.
+  git clone --branch "${BRANCH}" "${REPO_URL}" "${DEPLOY_PATH}"
 else
   echo "    Каталог уже содержит git-репозиторий, пропускаем клонирование."
 fi

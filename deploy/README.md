@@ -39,3 +39,40 @@ sudo DOMAIN=maximtalalayev.ru MODE=static WEBROOT=/var/www/maximtalalayev.ru ./s
 - Открывает порты 80/443 в UFW (если он активен).
 - Выпускает SSL-сертификат Let's Encrypt и настраивает автоматический редирект на HTTPS.
 - Проверяет автопродление сертификата (`certbot renew --dry-run`).
+
+## Автодеплой из GitHub
+
+При каждом push в ветку `main` GitHub Actions (`.github/workflows/deploy.yml`)
+подключается по SSH к серверу и запускает `deploy/deploy.sh`, который обновляет
+код (`git pull`), ставит PHP-зависимости через composer (если есть
+`composer.json`) и перезапускает PHP-FPM и Nginx.
+
+### Первоначальная настройка (один раз)
+
+1. На сервере (от root) запустите:
+   ```bash
+   sudo DEPLOY_PATH=/var/www/maximtalalayev.ru ./deploy/setup-deploy-user.sh
+   ```
+   Скрипт создаст отдельного пользователя `deploy`, склонирует репозиторий в
+   `DEPLOY_PATH` и разрешит пользователю `deploy` без пароля перезапускать
+   только `php-fpm` и `nginx` (больше никаких sudo-прав).
+
+2. На своём компьютере сгенерируйте SSH-ключ для деплоя и добавьте его на сервер:
+   ```bash
+   ssh-keygen -t ed25519 -f deploy_key -N "" -C "github-actions-deploy"
+   cat deploy_key.pub | ssh root@<IP_СЕРВЕРА> "cat >> /home/deploy/.ssh/authorized_keys"
+   ```
+
+3. В GitHub-репозитории: **Settings → Secrets and variables → Actions** —
+   добавьте секреты:
+   | Секрет | Значение |
+   |---|---|
+   | `DEPLOY_HOST` | IP-адрес или домен сервера |
+   | `DEPLOY_USER` | `deploy` |
+   | `DEPLOY_SSH_KEY` | содержимое приватного ключа `deploy_key` |
+   | `DEPLOY_PATH` | `/var/www/maximtalalayev.ru` |
+
+4. Удалите `deploy_key`/`deploy_key.pub` с локального компьютера — он больше не нужен.
+
+После этого каждый push в `main` будет автоматически выкладываться на сервер.
+Проверить статус деплоя можно во вкладке **Actions** репозитория на GitHub.
